@@ -149,29 +149,30 @@
 </div>
 
 <script>
-    // URL base de tu Google Sheet publicado como CSV
-    const baseSpreadsheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQcNO8lS6FiUn5QYoVQugzxfJrul1pKT-7tILSiogoKZQX3a7ZFz-FxTdKgZT3efw6DWM7J769zTZlq/pub?output=csv";
-
-    // Detecta el parámetro ?gid=XXXXX de la URL. Si no hay ninguno, usa el tuyo por defecto.
+    // Nueva URL Base limpia que fuerza el formato texto/csv saltándose bloqueos de origen (CORS)
+    const sheetId = "14X3ZwyDGGxhYcsEyxXnAFicfX2qtcP5rPyotO8vYWO8";
+    
     function getGidParam() {
         const urlParams = new URLSearchParams(window.location.search);
         return urlParams.get('gid') || "1806054144";
     }
 
     const currentGid = getGidParam();
-    const finalFetchUrl = `${baseSpreadsheetUrl}&gid=${currentGid}`;
+    
+    // Cambiamos a la URL de exportación nativa que da menos problemas de conexión externa
+    const finalFetchUrl = `https://docs.google.com/spreadsheets/d/e/${sheetId}/pub?gid=${currentGid}&single=true&output=csv`;
 
     fetch(finalFetchUrl)
         .then(res => {
-            if (!res.ok) throw new Error("No se pudo conectar con la base de datos.");
+            if (!res.ok) throw new Error("Acceso denegado por el servidor de datos.");
             return res.text();
         })
         .then(data => {
-            // Dividir las líneas del CSV de forma limpia
+            // Dividimos por saltos de línea cuidando formatos de Windows/Linux
             let lines = data.split(/\r?\n/).filter(line => line.trim() !== "");
             
-            if (lines.length <= 1) {
-                document.getElementById("historial").innerHTML = "<div class='loading'>No constan registros recientes para este aseo.</div>";
+            if (lines.length === 0) {
+                document.getElementById("historial").innerHTML = "<div class='loading'>No constan registros recientes.</div>";
                 return;
             }
 
@@ -179,19 +180,18 @@
             let registrosMostrados = 0;
 
             for (let i = 0; i < lines.length; i++) {
-                let row = lines[i].split(",");
+                // Expresión regular avanzada para separar por comas respetando si el texto lleva comillas
+                let row = lines[i].split(/,(?=(?:(?:[^"]*"){2})*[^"]*$)/);
                 
-                // Saltarse las cabeceras si el filtro QUERY las arrastra
+                // Si es cabecera, la saltamos
                 if (row[0].toLowerCase().includes("fecha") || row[0].toLowerCase().includes("timestamp")) {
                     continue; 
                 }
 
                 if (row[0]) { 
-                    // Limpiar las comillas automáticas del CSV de Google
                     let rawFecha = row[0].replace(/"/g, "").trim();
                     let tipoServicio = row[2] ? row[2].replace(/"/g, "").trim() : "Limpieza Estándar";
                     
-                    // Separar Fecha de Hora
                     let partes = rawFecha.split(" ");
                     let fecha = partes[0] || rawFecha;
                     let hora = partes[1] ? partes[1].substring(0, 5) : "--:--";
@@ -219,7 +219,11 @@
             }
         })
         .catch(err => {
-            document.getElementById("historial").innerHTML = `<div class='error-msg'>⚠️ Error de sincronización temporal: ${err.message}</div>`;
+            document.getElementById("historial").innerHTML = `
+                <div class='error-msg'>
+                    ⚠️ Error de sincronización temporal: ${err.message}<br><br>
+                    <small style="color:#718096; font-size:11px;">Asegúrate de que la hoja de cálculo sigue configurada como "Publicar en la web".</small>
+                </div>`;
         });
 </script>
 </body>
