@@ -130,7 +130,7 @@
 <div class="app-container">
     <div class="header">
         <h1>✨ Control de Higiene e Inspección</h1>
-        <p>Registro de acceso público homologado</p>
+        <p id="aseo-titulo">Registro de acceso público homologado</p>
     </div>
     
     <div class="status-banner">
@@ -149,14 +149,20 @@
 </div>
 
 <script>
+// Envolvemos todo en un evento que espera a que el HTML esté totalmente listo
+document.addEventListener("DOMContentLoaded", function() {
+    
     // 1. Obtener el ID del aseo desde la URL del QR (?id=aseo111)
     const urlParams = new URLSearchParams(window.location.search);
     const idAseo = (urlParams.get('id') || "aseo111").toLowerCase();
     
-    document.getElementById("aseo-titulo").innerText = `Código de Inspección: ${idAseo.toUpperCase()}`;
+    // Intentamos cambiar el título con protección para evitar el error "null"
+    const elementoTitulo = document.getElementById("aseo-titulo");
+    if (elementoTitulo) {
+        elementoTitulo.innerText = `Código de Inspección: ${idAseo.toUpperCase()}`;
+    }
 
     // 2. Apuntamos DIRECTAMENTE al archivo JSON local que genera tu Apps Script
-    // El "?t=" evita que el navegador guarde la página vieja en caché
     const jsonUrl = `./datos-${idAseo}.json?t=${new Date().getTime()}`;
 
     fetch(jsonUrl)
@@ -185,12 +191,12 @@
             document.getElementById("historial").innerHTML = html;
         })
         .catch(err => {
-            // Si el archivo JSON no existe todavía o está vacío
             document.getElementById("historial").innerHTML = `
-                <div class='loading' style='color:#718096;'>
+                <div class='loading' style='color:#718096; padding: 20px;'>
                     ℹ️ No constan limpiezas registradas hoy para el código ${idAseo.toUpperCase()}.
                 </div>`;
         });
+});
 </script>
 </body>
 </html>
