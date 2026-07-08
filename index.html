@@ -1,0 +1,226 @@
+﻿<!DOCTYPE html>
+<html lang="es">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Control de Higiene Corporativa</title>
+    <style>
+        *, *::before, *::after { box-sizing: border-box; }
+        body { 
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+            background-color: #f4f7f9; 
+            margin: 0; 
+            padding: 0; 
+            color: #2d3748;
+            display: flex;
+            justify-content: center;
+            align-items: flex-start;
+            min-height: 100vh;
+        }
+        .app-container { 
+            width: 100%; 
+            max-width: 480px; 
+            background: #ffffff; 
+            min-height: 100vh;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.05);
+            padding: 24px;
+            display: flex;
+            flex-direction: column;
+        }
+        @media (min-width: 481px) {
+            .app-container {
+                min-height: auto;
+                border-radius: 16px;
+                margin: 40px 0;
+            }
+        }
+        .header { 
+            text-align: center; 
+            margin-bottom: 24px; 
+            border-bottom: 2px solid #edf2f7;
+            padding-bottom: 20px;
+        }
+        .header h1 { 
+            font-size: 20px; 
+            color: #1a365d; 
+            margin: 0 0 6px 0; 
+            font-weight: 700;
+            letter-spacing: -0.5px;
+        }
+        .header p { 
+            margin: 0; 
+            color: #718096; 
+            font-size: 14px; 
+        }
+        .status-banner {
+            background-color: #ebf8ff;
+            border-left: 4px solid #3182ce;
+            padding: 12px;
+            border-radius: 4px;
+            margin-bottom: 24px;
+            font-size: 13px;
+            color: #2b6cb0;
+        }
+        .section-title {
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: #4a5568;
+            margin: 0 0 16px 0;
+            font-weight: 600;
+        }
+        .timeline {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+        .timeline-item { 
+            display: flex; 
+            justify-content: space-between; 
+            align-items: center; 
+            padding: 14px 16px; 
+            background: #f8fafc;
+            border: 1px solid #e2e8f0;
+            border-radius: 12px; 
+        }
+        .time-data {
+            display: flex;
+            flex-direction: column;
+        }
+        .date { 
+            font-weight: 600; 
+            font-size: 15px; 
+            color: #1a202c; 
+        }
+        .time { 
+            font-size: 13px; 
+            color: #718096; 
+            margin-top: 2px; 
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        .badge { 
+            background: #e6fffa; 
+            color: #234e52; 
+            padding: 6px 12px; 
+            border-radius: 20px; 
+            font-size: 12px; 
+            font-weight: 700; 
+            border: 1px solid #b2f5ea;
+        }
+        .loading, .error-msg {
+            text-align: center;
+            padding: 40px 20px;
+            color: #718096;
+            font-size: 15px;
+        }
+        .error-msg { color: #e53e3e; }
+        .footer {
+            margin-top: auto;
+            text-align: center;
+            font-size: 11px;
+            color: #a0aec0;
+            padding-top: 40px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="app-container">
+    <div class="header">
+        <h1>✨ Control de Higiene e Inspección</h1>
+        <p>Registro de acceso público homologado</p>
+    </div>
+    
+    <div class="status-banner">
+        🔒 Datos sincronizados directamente con el sistema de calidad interno.
+    </div>
+
+    <h2 class="section-title">Últimas 5 intervenciones</h2>
+    
+    <div id="historial">
+        <div class="loading">Sincronizando con la base de datos...</div>
+    </div>
+    
+    <div class="footer">
+        Sistema verificado • Cumplimiento de políticas corporativas
+    </div>
+</div>
+
+<script>
+    // URL base de tu Google Sheet publicado como CSV
+    const baseSpreadsheetUrl = "https://docs.google.com/spreadsheets/d/e/2PACX-1vQcNO8lS6FiUn5QYoVQugzxfJrul1pKT-7tILSiogoKZQX3a7ZFz-FxTdKgZT3efw6DWM7J769zTZlq/pub?output=csv";
+
+    // Detecta el parámetro ?gid=XXXXX de la URL. Si no hay ninguno, usa el tuyo por defecto.
+    function getGidParam() {
+        const urlParams = new URLSearchParams(window.location.search);
+        return urlParams.get('gid') || "1806054144";
+    }
+
+    const currentGid = getGidParam();
+    const finalFetchUrl = `${baseSpreadsheetUrl}&gid=${currentGid}`;
+
+    fetch(finalFetchUrl)
+        .then(res => {
+            if (!res.ok) throw new Error("No se pudo conectar con la base de datos.");
+            return res.text();
+        })
+        .then(data => {
+            // Dividir las líneas del CSV de forma limpia
+            let lines = data.split(/\r?\n/).filter(line => line.trim() !== "");
+            
+            if (lines.length <= 1) {
+                document.getElementById("historial").innerHTML = "<div class='loading'>No constan registros recientes para este aseo.</div>";
+                return;
+            }
+
+            let html = '<div class="timeline">';
+            let registrosMostrados = 0;
+
+            for (let i = 0; i < lines.length; i++) {
+                let row = lines[i].split(",");
+                
+                // Saltarse las cabeceras si el filtro QUERY las arrastra
+                if (row[0].toLowerCase().includes("fecha") || row[0].toLowerCase().includes("timestamp")) {
+                    continue; 
+                }
+
+                if (row[0]) { 
+                    // Limpiar las comillas automáticas del CSV de Google
+                    let rawFecha = row[0].replace(/"/g, "").trim();
+                    let tipoServicio = row[2] ? row[2].replace(/"/g, "").trim() : "Limpieza Estándar";
+                    
+                    // Separar Fecha de Hora
+                    let partes = rawFecha.split(" ");
+                    let fecha = partes[0] || rawFecha;
+                    let hora = partes[1] ? partes[1].substring(0, 5) : "--:--";
+
+                    html += `
+                        <div class="timeline-item">
+                            <div class="time-data">
+                                <span class="date">${fecha}</span>
+                                <span class="time">⏰ ${hora} h • ${tipoServicio}</span>
+                            </div>
+                            <span class="badge">✓ Realizado</span>
+                        </div>
+                    `;
+                    registrosMostrados++;
+                }
+                if (registrosMostrados >= 5) break; 
+            }
+            
+            html += '</div>';
+            
+            if (registrosMostrados === 0) {
+                document.getElementById("historial").innerHTML = "<div class='loading'>No constan registros recientes para este aseo.</div>";
+            } else {
+                document.getElementById("historial").innerHTML = html;
+            }
+        })
+        .catch(err => {
+            document.getElementById("historial").innerHTML = `<div class='error-msg'>⚠️ Error de sincronización temporal: ${err.message}</div>`;
+        });
+</script>
+</body>
+</html>
