@@ -42,46 +42,56 @@
 
 <script>
 document.addEventListener("DOMContentLoaded", function() {
-    // Inicializar los iconos de Lucide al cargar la web
+    // 1. Inicializar iconos base
     lucide.createIcons();
 
+    // 2. Capturar el código corto de la URL (?id=a37)
     const urlParams = new URLSearchParams(window.location.search);
-    const idAseo = (urlParams.get('id') || "aseo111").toLowerCase();
+    const idAseo = (urlParams.get('id') || "a37").toLowerCase().trim();
     
+    // Ponemos un título temporal por si el JSON tarda en responder
     const elementoTitulo = document.getElementById("aseo-titulo");
     if (elementoTitulo) {
         elementoTitulo.innerText = `Aseo: ${idAseo.toUpperCase()}`;
     }
 
+    // 3. Llamamos al JSON generado de forma asíncrona
     const jsonUrl = `./datos-${idAseo}.json?t=${new Date().getTime()}`;
 
     fetch(jsonUrl)
         .then(res => {
-            if (!res.ok) throw new Error();
+            if (!res.ok) throw new Error("Archivo no encontrado");
             return res.json();
         })
         .then(registros => {
             if (!registros || registros.length === 0) {
-                document.getElementById("historial").innerHTML = "<div class='loading'>No constan registros recientes.</div>";
+                document.getElementById("historial").innerHTML = `
+                    <div class='text-center py-8 text-sm text-slate-400 bg-slate-50 border border-dashed border-slate-200 rounded-xl'>
+                        No constan registros recientes.
+                    </div>`;
                 return;
             }
-        
-            // ACTUALIZACIÓN DE LOGICA: Extrae el nombre bonito directamente del primer registro del JSON
-            const elementoTitulo = document.getElementById("aseo-titulo");
-            if (elementoTitulo && registros[0].nombreReal) {
+
+            // TRADUCCIÓN DINÁMICA: Si el JSON trae el nombre bonito, lo planchamos en el título
+            if (elementoTitulo && registros[0] && registros[0].nombreReal) {
                 elementoTitulo.innerText = registros[0].nombreReal;
             }
-        
-            let html = '<div class="space-y-3">';
 
+            // 4. Renderizar la línea de tiempo de limpiezas
+            let html = '<div class="space-y-3">';
             registros.forEach(r => {
+                // Control por si acaso algún registro viejo no tuviera la estructura nueva
+                const servicioTexto = r.servicio || "Limpieza y Desinfección Estándar";
+                const fechaTexto = r.fecha || "";
+                const horaTexto = r.hora || "";
+
                 html += `
                     <div class="flex justify-between items-center p-4 bg-slate-50 border border-slate-200/60 rounded-xl transition-all duration-200 hover:border-slate-300">
                         <div class="flex flex-col gap-0.5">
-                            <span class="font-bold text-sm text-slate-900">${r.fecha} — ${r.hora} h</span>
+                            <span class="font-bold text-sm text-slate-900">${fechaTexto} — ${horaTexto} h</span>
                             <span class="text-xs text-slate-600 flex items-center gap-1">
                               <i data-lucide="activity" class="w-3 h-3 text-slate-400"></i>
-                              ${r.servicio}
+                              ${servicioTexto}
                             </span>
                         </div>
                         <span class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold px-2.5 py-1 rounded-lg">
@@ -90,12 +100,14 @@ document.addEventListener("DOMContentLoaded", function() {
                     </div>`;
             });
             html += '</div>';
+            
             document.getElementById("historial").innerHTML = html;
             
-            // Re-renderizar iconos inyectados por JS
+            // Re-renderizar los iconos vectoriales de Lucide insertados por JS
             lucide.createIcons();
         })
-        .catch(() => {
+        .catch(err => {
+            console.log("Detalle del error fetch: ", err);
             document.getElementById("historial").innerHTML = `
                 <div class='text-center py-8 text-xs font-medium text-slate-400 bg-slate-50/50 border border-dashed border-slate-200 rounded-xl p-4'>
                     ℹ️ No constan limpiezas registradas en las últimas horas para el código ${idAseo.toUpperCase()}.
