@@ -62,14 +62,18 @@ document.addEventListener("DOMContentLoaded", function() {
         })
         .then(registros => {
             if (!registros || registros.length === 0) {
-                document.getElementById("historial").innerHTML = `
-                    <div class='text-center py-8 text-sm text-slate-400 bg-slate-50 border border-dashed border-slate-200 rounded-xl'>
-                        No constan registros recientes.
-                    </div>`;
+                document.getElementById("historial").innerHTML = "<div class='loading'>No constan registros recientes.</div>";
                 return;
             }
-
+        
+            // ACTUALIZACIÓN DE LOGICA: Extrae el nombre bonito directamente del primer registro del JSON
+            const elementoTitulo = document.getElementById("aseo-titulo");
+            if (elementoTitulo && registros[0].nombreReal) {
+                elementoTitulo.innerText = registros[0].nombreReal;
+            }
+        
             let html = '<div class="space-y-3">';
+
             registros.forEach(r => {
                 html += `
                     <div class="flex justify-between items-center p-4 bg-slate-50 border border-slate-200/60 rounded-xl transition-all duration-200 hover:border-slate-300">
