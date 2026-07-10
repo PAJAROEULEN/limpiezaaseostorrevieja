@@ -80,23 +80,36 @@ document.addEventListener("DOMContentLoaded", function() {
             // 4. Renderizar la línea de tiempo de limpiezas
             let html = '<div class="space-y-3">';
             registros.forEach(r => {
-                // Control por si acaso algún registro viejo no tuviera la estructura nueva
-                const servicioTexto = r.servicio || "Limpieza y Desinfección Estándar";
-                const fechaTexto = r.fecha || "";
-                const horaTexto = r.hora || "";
+                const fechaTexto = r.fecha ? r.fecha : "Reciente";
+                const horaTexto = r.hora ? `${r.hora} h` : "";
+                const servicioTexto = r.servicio ? r.servicio.trim() : "Limpieza y Desinfección Estándar";
+
+                // VALIDACIÓN: Comparamos si el servicio es estrictamente el estándar
+                let badgeHtml = '';
+                if (servicioTexto === "Limpieza y Desinfección Estándar") {
+                    // Badge Verde si todo está OK
+                    badgeHtml = `
+                        <span class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold px-2.5 py-1 rounded-lg shrink-0">
+                            <i data-lucide="check" class="w-3.5 h-3.5"></i> Conforme
+                        </span>`;
+                } else {
+                    // Badge Naranja de Alerta si el operario escribió una observación/incidencia
+                    badgeHtml = `
+                        <span class="inline-flex items-center gap-1 bg-amber-50 text-amber-700 border border-amber-200 text-xs font-bold px-2.5 py-1 rounded-lg shrink-0">
+                            <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i> Incidencia
+                        </span>`;
+                }
 
                 html += `
-                    <div class="flex justify-between items-center p-4 bg-slate-50 border border-slate-200/60 rounded-xl transition-all duration-200 hover:border-slate-300">
-                        <div class="flex flex-col gap-0.5">
-                            <span class="font-bold text-sm text-slate-900">${fechaTexto} — ${horaTexto} h</span>
-                            <span class="text-xs text-slate-600 flex items-center gap-1">
-                              <i data-lucide="activity" class="w-3 h-3 text-slate-400"></i>
-                              ${servicioTexto}
+                    <div class="flex justify-between items-center p-4 bg-slate-50 border border-slate-200/60 rounded-xl transition-all duration-200 hover:border-slate-300 gap-4">
+                        <div class="flex flex-col gap-0.5 min-w-0">
+                            <span class="font-bold text-sm text-slate-900">${fechaTexto} — ${horaTexto}</span>
+                            <span class="text-xs text-slate-600 flex items-start gap-1 break-words">
+                              <i data-lucide="activity" class="w-3 h-3 text-slate-400 mt-0.5 shrink-0"></i>
+                              <span>${servicioTexto}</span>
                             </span>
                         </div>
-                        <span class="inline-flex items-center gap-1 bg-emerald-50 text-emerald-700 border border-emerald-200 text-xs font-bold px-2.5 py-1 rounded-lg">
-                            <i data-lucide="check" class="w-3.5 h-3.5"></i> Conforme
-                        </span>
+                        ${badgeHtml}
                     </div>`;
             });
             html += '</div>';
